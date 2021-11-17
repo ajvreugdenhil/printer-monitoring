@@ -4,7 +4,7 @@
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
-                <mxCell id="2" value="Printer" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e3c800;strokeColor=#B09500;fontColor=#000000;" parent="1" vertex="1">
+                <mxCell id="2" value="Printer" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
                     <mxGeometry x="480" y="160" width="120" height="60" as="geometry"/>
                 </mxCell>
                 <mxCell id="13" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;startArrow=classic;startFill=1;" parent="1" source="3" target="2" edge="1">
@@ -13,7 +13,7 @@
                 <mxCell id="30" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="3" target="23" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
-                <mxCell id="3" value="Octoprint" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e3c800;strokeColor=#B09500;fontColor=#000000;" parent="1" vertex="1">
+                <mxCell id="3" value="Octoprint" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
                     <mxGeometry x="280" y="160" width="120" height="60" as="geometry"/>
                 </mxCell>
                 <mxCell id="4" value="" style="endArrow=none;dashed=1;html=1;dashPattern=1 3;strokeWidth=2;" parent="1" edge="1">
@@ -51,10 +51,10 @@
                 <mxCell id="5" value="Printer Module&lt;br&gt;(NodeMCU)" style="rounded=0;whiteSpace=wrap;html=1;strokeColor=#B09500;fontColor=#000000;fillColor=#00FF00;" parent="1" vertex="1">
                     <mxGeometry x="480" y="240" width="120" height="60" as="geometry"/>
                 </mxCell>
-                <mxCell id="6" value="ROGW leds" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e3c800;strokeColor=#B09500;fontColor=#000000;" parent="1" vertex="1">
+                <mxCell id="6" value="Stack Light" style="rounded=0;whiteSpace=wrap;html=1;strokeColor=#B09500;fontColor=#000000;fillColor=#00FF00;" parent="1" vertex="1">
                     <mxGeometry x="680" y="240" width="120" height="60" as="geometry"/>
                 </mxCell>
-                <mxCell id="7" value="Accelerometer" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e3c800;strokeColor=#B09500;fontColor=#000000;" parent="1" vertex="1">
+                <mxCell id="7" value="Accelerometer" style="rounded=0;whiteSpace=wrap;html=1;strokeColor=#B09500;fontColor=#000000;fillColor=#00FF00;" parent="1" vertex="1">
                     <mxGeometry x="680" y="320" width="120" height="60" as="geometry"/>
                 </mxCell>
                 <mxCell id="10" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;startArrow=classic;startFill=1;" parent="1" source="8" target="5" edge="1">
@@ -71,7 +71,7 @@
                 <mxCell id="8" value="Status Gateway" style="rounded=0;whiteSpace=wrap;html=1;strokeColor=#B09500;fontColor=#000000;fillColor=#00FF00;" parent="1" vertex="1">
                     <mxGeometry x="280" y="240" width="120" height="60" as="geometry"/>
                 </mxCell>
-                <mxCell id="9" value="Netdata" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                <mxCell id="9" value="Netdata" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#66B2FF;" parent="1" vertex="1">
                     <mxGeometry x="280" y="320" width="120" height="60" as="geometry"/>
                 </mxCell>
                 <mxCell id="15" value="Hardware" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
@@ -92,7 +92,7 @@
                 <mxCell id="25" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="19" target="22" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
-                <mxCell id="19" value="Grafana" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                <mxCell id="19" value="Grafana" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#66B2FF;" parent="1" vertex="1">
                     <mxGeometry x="50" y="160" width="120" height="60" as="geometry"/>
                 </mxCell>
                 <mxCell id="24" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="20" target="19" edge="1">
@@ -103,7 +103,7 @@
                 <mxCell id="20" value="Actor" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;" parent="1" vertex="1">
                     <mxGeometry y="160" width="30" height="60" as="geometry"/>
                 </mxCell>
-                <mxCell id="22" value="InfluxDB" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                <mxCell id="22" value="InfluxDB" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#66B2FF;" parent="1" vertex="1">
                     <mxGeometry x="50" y="80" width="120" height="60" as="geometry"/>
                 </mxCell>
                 <mxCell id="26" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;startArrow=none;" parent="1" source="31" target="22" edge="1">
@@ -133,7 +133,7 @@
                         </Array>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="23" value="Prometheus" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                <mxCell id="23" value="Prometheus" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#66B2FF;" parent="1" vertex="1">
                     <mxGeometry x="280" y="80" width="120" height="60" as="geometry"/>
                 </mxCell>
                 <mxCell id="31" value="" style="aspect=fixed;perimeter=ellipsePerimeter;html=1;align=center;shadow=0;dashed=0;spacingTop=3;image;image=img/lib/active_directory/firewall.svg;" parent="1" vertex="1">
