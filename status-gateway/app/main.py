@@ -10,10 +10,12 @@ max_cold_temperature = 35
 
 stopflag = False
 
+
 def signal_handler(sig, frame):
     print("Got signal: " + str(sig) + " Stopping...")
     global stopflag
     stopflag = True
+
 
 print("Starting")
 
@@ -35,28 +37,35 @@ signal.signal(signal.SIGTERM, signal_handler)
 
 lampstates = {"red": "off", "orange": "blink", "green": "off", "white": "off"}
 
+p.set_printer_message("Statusgateway ready")
+
 while not stopflag:
     for color in lampstates:
         m.send_message(color + "-" + lampstates[color])
     time.sleep(1)
     # TODO: resend count
     # TODO: vibrations
-    
+
     status = p.get_printer_endpoint("/api/printer")
     if status is not None:
         is_reachable = True
-        is_tool0_hot = status["temperature"]["tool0"]["actual"] > status["temperature"]["tool0"]["target"] - temperature_margin
-        is_bed_hot = status["temperature"]["bed"]["actual"] > status["temperature"]["bed"]["target"] - temperature_margin
-        is_tool0_warm = status["temperature"]["tool0"]["actual"] > max_cold_temperature
-        is_bed_warm = status["temperature"]["bed"]["actual"] > max_cold_temperature
-        is_error = status["state"]["flags"]["error"]
-        is_closed_or_error = status["state"]["flags"]["closedOrError"]
-        is_printing = status["state"]["flags"]["printing"]
-        is_ready = status["state"]["flags"]["ready"]
-        is_pausing = status["state"]["flags"]["pausing"]
-        is_paused = status["state"]["flags"]["paused"]
-        is_cancelling = status["state"]["flags"]["cancelling"]
-        is_printing = status["state"]["flags"]["printing"]
+        try:
+            is_tool0_hot = status["temperature"]["tool0"]["actual"] > status["temperature"]["tool0"]["target"] - temperature_margin
+            is_bed_hot = status["temperature"]["bed"]["actual"] > status["temperature"]["bed"]["target"] - temperature_margin
+            is_tool0_warm = status["temperature"]["tool0"]["actual"] > max_cold_temperature
+            is_bed_warm = status["temperature"]["bed"]["actual"] > max_cold_temperature
+            is_error = status["state"]["flags"]["error"]
+            is_closed_or_error = status["state"]["flags"]["closedOrError"]
+            is_printing = status["state"]["flags"]["printing"]
+            is_ready = status["state"]["flags"]["ready"]
+            is_pausing = status["state"]["flags"]["pausing"]
+            is_paused = status["state"]["flags"]["paused"]
+            is_cancelling = status["state"]["flags"]["cancelling"]
+            is_printing = status["state"]["flags"]["printing"]
+        except KeyError:
+            # unable to set right lamps
+            print("did not get proper data")
+            continue
 
         if is_error or is_closed_or_error:
             lampstates["red"] = "on"
@@ -86,7 +95,7 @@ while not stopflag:
     else:
         is_reachable = False
         lampstates["orange"] = "blink"
-    
+
 
 m.send_message("red-off")
 m.send_message("orange-blink")

@@ -4,12 +4,18 @@
 
 This project was designed to assist 3d printer operators with managing their printers. One important aspect is partial autonomy. The service evaluates printer parameters and determines if they're within normal range. If they veer outside, logs are created and the indicators are adjusted accordingly.
 
+## System description
+
+![Overview of the entire system, consisting of hardware, RPi and cloud sections](docs/system-overview.png "system overview")
+
 ## Indicators
 
-solid red - cannot print
-blinking orange - connection issues
-solid orange - parameters not ideal
-blinking green - warming up
-solid green - operational
-blinking white - cooling down
-solid white - idle
+| color  | behaviour | meaning             |
+| ------ | --------- | ------------------- |
+| red    | solid     | error               |
+| orange | blinking  | connectivity issues |
+| orange | solid     | not ready           |
+| green  | blinking  | warming up          |
+| green  | solid     | printing            |
+| white  | blinking  | waiting             |
+| white  | solid     | idle                |
