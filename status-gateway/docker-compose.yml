@@ -2,6 +2,8 @@ version: "3"
 
 services:
   gateway:
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     privileged: true
     build: .
     env_file: 
