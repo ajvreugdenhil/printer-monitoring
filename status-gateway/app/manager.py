@@ -16,11 +16,15 @@ class PrinterManager:
         self.gateway_logger = gateway_logger
 
     def tick(self):
-        # TODO: resend count
-        # TODO: vibrations
-
         for color in lampstates:
-            self.printermodule.send(color + "-" + lampstates[color])
+            result = self.printermodule.send(color + "-" + lampstates[color])
+            if result is not None:
+                if result["result"] != "ok":
+                    self.gateway_logger.error(f"Tried setting {color}-{lampstates[color]} but resulted in {result}")
+                    return False
+            else:
+                self.gateway_logger.error(f"Tried setting {color}-{lampstates[color]} but got unparsable response")
+                return False
 
         status = self.printer.get_printer_endpoint("/api/printer")
         if status is not None:
@@ -39,9 +43,8 @@ class PrinterManager:
                 is_cancelling = status["state"]["flags"]["cancelling"]
                 is_printing = status["state"]["flags"]["printing"]
             except KeyError:
-                # unable to set right lamps
-                self.gateway_logger.error("did not get proper data from printer")
-                return
+                self.gateway_logger.error("Printmon manager did not get proper data from printer")
+                return False
 
             if is_error or is_closed_or_error:
                 lampstates["red"] = "on"
@@ -67,7 +70,9 @@ class PrinterManager:
                 lampstates["white"] = "on"
             else:
                 lampstates["white"] = "off"
+            return True
 
         else:
             is_reachable = False
             lampstates["orange"] = "blink"
+            return False

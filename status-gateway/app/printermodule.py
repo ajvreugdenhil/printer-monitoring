@@ -2,6 +2,7 @@ import serial
 import json
 import os
 import logging
+from threading import Lock
 
 startchar = '@'
 endchar = '$'
@@ -26,18 +27,29 @@ class PrinterModule:
         self.serial_range = serial_range
         self.port = None
 
+        self.send_mutex = Lock()
+
     def send(self, message):
         encoded_message = (startchar + message + endchar).encode("utf-8")
-        try:
-            self.port.write(encoded_message)
-            incoming_data = self.port.readline().decode().strip()
-        except:
-            return None
-        if (len(incoming_data) >= 2):
-            if (incoming_data[0] == startchar and incoming_data[-1] == endchar):
-                return incoming_data[1:-1]
-            else:
+        with self.send_mutex:
+            try:
+                self.port.write(encoded_message)
+            except:
+                self.gateway_logger.error("Did not send serial message: " + message)
                 return None
+            try:
+                incoming_data = self.port.read_until(endchar).decode('utf-8')
+            except serial.SerialTimeoutException as e:
+                self.gateway_logger.error("Did not receive valid response in time: " + str(e))
+                return None
+            self.gateway_logger.debug("incoming_data: " + str(incoming_data))
+            incoming_data_clean = incoming_data.split(startchar)[1].strip()[:-1]
+            self.gateway_logger.debug("clean incoming data: " + incoming_data_clean)
+        
+            obj = json.loads(incoming_data_clean)
+            if obj is None:
+                self.gateway_logger.error("Could not parse: " + incoming_data_clean)
+            return obj
 
     def start(self) -> bool:
         if self.serial_device is not None:
@@ -56,13 +68,16 @@ class PrinterModule:
                 return False
             elif (len(relevant_devices) == 1):
                 self.port = serial.Serial(
-                    relevant_devices[0], self.baudrate, timeout=0.05)
+                    relevant_devices[0], self.baudrate, timeout=0.5)
             else:
                 for device in relevant_devices:
-                    testport = serial.Serial(device, self.baudrate, timeout=1)
+                    try:
+                        testport = serial.Serial(device, self.baudrate, timeout=1)
+                    except serial.serialutil.SerialException:
+                        continue
                     testport.flush()
                     message = (startchar + "get-acceleration" +
-                               endchar).encode("utf-8")
+                            endchar).encode("utf-8")
                     testport.write(message)
                     try:
                         incoming_data = testport.readline()
@@ -78,11 +93,12 @@ class PrinterModule:
                             data = json.loads(incoming_data)
                             if data["result"] == "ok" and self.port is None:  # HACK
                                 self.port = serial.Serial(
-                                    device, self.baudrate, timeout=0.05)
+                                    device, self.baudrate, timeout=0.5)
                         except:
                             continue
 
         if self.port is not None:
+            self.port.flush()
             return True
         else:
             return False

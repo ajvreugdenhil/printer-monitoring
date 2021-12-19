@@ -1,0 +1,33 @@
+global:
+  scrape_interval:     15s # By default, scrape targets every 15 seconds.
+  external_labels:
+    monitor: 'bangedalab-printer'
+
+scrape_configs:
+  - job_name: 'prometheus'
+    scrape_interval: 5s
+    static_configs:
+      - targets: ['localhost:9090']
+  
+# https://github.com/tg44/OctoPrint-Prometheus-Exporter
+  - job_name: 'octoprint'
+    scrape_interval: 5s
+    metrics_path: '/plugin/prometheus_exporter/metrics'
+    params:
+      apikey: ['']
+    static_configs:
+      - targets: ['host.docker.internal:5000']
+  
+  - job_name: 'printmon'
+    scrape_interval: 2s
+    metrics_path: '/'
+    static_configs:
+      - targets: ['gateway:8000']
+    
+  - job_name: 'netdata'
+    metrics_path: '/api/v1/allmetrics'
+    params:
+      format: [prometheus]
+    honor_labels: true
+    static_configs:
+      - targets: ['host.docker.internal:19999']
