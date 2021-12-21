@@ -54,7 +54,7 @@ p = printer.Printer(ip, port, token, printer_logger, gateway_logger)
 
 manager = manager.PrinterManager(p, m, printer_logger, gateway_logger)
 
-metrics_port = os.environ.get("METRICS_PORT", 8000)
+metrics_port = int(os.environ.get("METRICS_PORT", 8000))
 metric_logger = metriclogger.MetricLogger(m, metrics_port, gateway_logger=gateway_logger)
 
 gateway_logger.info("Starting")
@@ -62,7 +62,7 @@ gateway_logger.info("Starting")
 if not p.set_printer_message("Gateway started"):
     gateway_logger.error("Could not set initial printer message")
 
-max_connection_error_count = os.environ.get("MAX_CONN_ERROR_COUNT", 10)
+max_connection_error_count = int(os.environ.get("MAX_CONN_ERROR_COUNT", 10))
 connection_error_count = 0
 
 signal.signal(signal.SIGINT, signal_handler)

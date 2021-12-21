@@ -25,3 +25,9 @@ services:
     volumes:
       - prometheus-storage:/etc/prometheus
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
+
+  telegraf:
+    image: telegraf
+    restart: always
+    volumes:
+      - ./telegraf.conf:/etc/telegraf/telegraf.conf:ro

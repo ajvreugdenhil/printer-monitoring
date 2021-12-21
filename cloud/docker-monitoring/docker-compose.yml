@@ -1,0 +1,37 @@
+version: "3"
+
+services:
+  influxdb:
+    image: influxdb:1.8
+    stdin_open: true
+    tty: true
+    ports:
+      - 50059:8086
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8086/metrics"]
+      timeout: 2s
+      interval: 1m
+      retries: 5
+    volumes:
+      - ./influx/data:/var/lib/influxdb
+      - ./influx/config:/etc/influxdb
+    env_file:
+      - influxdb_auth.env
+
+  grafana:
+    user: "1000"
+    image: grafana/grafana
+    restart: on-failure
+    extra_hosts:
+      - "host.docker.internal:172.17.0.1"
+    ports:
+      - 3000:3000
+    env_file:
+      - grafana_auth.env
+    environment:
+      - GF_PANELS_DISABLE_SANITIZE_HTML=true
+      - GF_INSTALL_PLUGINS=agenty-flowcharting-panel,natel-plotly-panel
+      - GF_SECURITY_ALLOW_EMBEDDING=true
+    volumes:
+      - ./grafana/data:/var/lib/grafana
