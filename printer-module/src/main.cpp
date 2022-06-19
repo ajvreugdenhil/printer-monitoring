@@ -1,23 +1,25 @@
-/* Auxiliary processor for 3d printers
- *  functionality includes vibration sensing, andon lights
+/* 
  *
- * SCL to D1, SDA to d2
- * lamp red through white to D5 through D8
  * 
  * Arjan Vreugdenhil | Bangedaon
  */
 
 #include <Arduino.h>
-#include <Wire.h>
-#include <LSM6.h>
+#include "ESP8266mDNS.h"
+#include <WiFiManager.h>
+#include <ESPAsyncTCP.h>
+#include <ESPAsyncWebServer.h>
 
-#define LIGHT_PIN_RED D5
-#define LIGHT_PIN_ORANGE D6
-#define LIGHT_PIN_GREEN D7
-#define LIGHT_PIN_WHITE D8
-#define LIGHTCOUNT 4
+#define API_PORT 80
 
-#define LIGHT_BLINK_SPEED 700
+#define LIGHT_BLINK_SPEED 500
+
+#define LIGHT_PIN_RED D0
+#define LIGHT_PIN_ORANGE D1
+#define LIGHT_PIN_GREEN D2
+#define LIGHT_PIN_BLUE D3
+#define LIGHT_PIN_WHITE D4
+#define LIGHTCOUNT 5
 
 enum light_state
 {
@@ -26,61 +28,104 @@ enum light_state
   BLINKING
 };
 
+static const String light_ids[LIGHTCOUNT] =
+    {"RED",
+     "ORG",
+     "GRN",
+     "BLU",
+     "WHT"};
+
 static const int lights[LIGHTCOUNT] = {LIGHT_PIN_RED,
                                        LIGHT_PIN_ORANGE,
                                        LIGHT_PIN_GREEN,
+                                       LIGHT_PIN_BLUE,
                                        LIGHT_PIN_WHITE};
-static light_state light_red_state = OFF;
-static light_state light_orange_state = OFF;
-static light_state light_green_state = OFF;
-static light_state light_white_state = OFF;
+
+static light_state light_states[LIGHTCOUNT] = {OFF};
 
 static unsigned long previous_light_millis;
 static bool blink_state;
 
-LSM6 imu;
-char report[250];
-const int max_batchsize = 5000;
+WiFiManager wifiManager;
+AsyncWebServer server(API_PORT);
 
-int batchsize;
-int16_t history_x[max_batchsize];
-int16_t history_y[max_batchsize];
-int16_t history_z[max_batchsize];
-int16_t previous_x = 0;
-int16_t previous_y = 0;
-int16_t previous_z = 0;
-
-const char message_start_char = '@';
-const char message_end_char = '$';
-const int max_incoming_message_size = 80;
-int incoming_message_size = 0;
-char incoming_message[max_incoming_message_size] = {0};
+void notFound(AsyncWebServerRequest *request) {
+    request->send(404, "text/plain", "Not found");
+}
 
 void setup()
 {
-  batchsize = 0;
-
   Serial.begin(115200);
+  delay(200);
+
+  WiFi.softAPdisconnect(true);
+  if (!wifiManager.autoConnect("PrinterModule"))
+  {
+    Serial.println("Failed to connect and hit timeout");
+    delay(3000);
+    ESP.restart();
+    delay(5000);
+  }
+  else
+  {
+    Serial.println("Connected.");
+  }
+
   for (int i = 0; i < LIGHTCOUNT; i++)
   {
     pinMode(lights[i], OUTPUT);
   }
   for (int i = 0; i < LIGHTCOUNT; i++)
   {
-    digitalWrite(lights[i], HIGH);
+    //digitalWrite(lights[i], HIGH);
+    analogWrite(lights[i], 50);
   }
   delay(1000);
 
-  Wire.begin();
 
-  if (!imu.init())
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
+      request->send(200, "text/plain", "Hello, world");
+  });
+
+  // Send a GET request to <IP>/get?message=<message>
+  server.on("/get", HTTP_GET, [] (AsyncWebServerRequest *request) {
+      String message;
+      if (request->hasParam(PARAM_MESSAGE)) {
+          message = request->getParam(PARAM_MESSAGE)->value();
+      } else {
+          message = "No message sent";
+      }
+      request->send(200, "text/plain", "Hello, GET: " + message);
+  });
+
+  // Send a POST request to <IP>/post with a form field message set to <message>
+  server.on("/post", HTTP_POST, [](AsyncWebServerRequest *request){
+      String message;
+      if (request->hasParam(PARAM_MESSAGE, true)) {
+          message = request->getParam(PARAM_MESSAGE, true)->value();
+      } else {
+          message = "No message sent";
+      }
+      request->send(200, "text/plain", "Hello, POST: " + message);
+  });
+
+  server.onNotFound(notFound);
+
+  server.begin();
+
+
+  const int mdns_name_len = 21;
+  char mdns_name[mdns_name_len];
+  sprintf(mdns_name, "printermodule_%6X", ESP.getChipId());
+  if (!MDNS.begin(mdns_name))
   {
-    Serial.println("Failed to detect and initialize IMU!");
+      Serial.println("Error setting up MDNS responder!");
   }
   else
   {
-    imu.enableDefault();
+      Serial.println("mDNS responder started");
   }
+  MDNS.addService("printermdule", "tcp", API_PORT);
 
   for (int i = 0; i < LIGHTCOUNT; i++)
   {
@@ -91,197 +136,35 @@ void setup()
   blink_state = false;
 }
 
-char *generate_acceleration_report()
-{
-  const int histories_count = 3;
-  int16_t *histories[histories_count] = {history_x, history_y, history_z};
-  int16_t max_amplitudes[3] = {0, 0, 0};
-  int16_t avg_amplitudes[3] = {0, 0, 0};
-  for (int i = 0; i < histories_count; i++)
-  {
-    int16_t max_amplitude = 0;
-    int64_t total_amplitude = 0;
-    for (int j = 0; j < batchsize; j++)
-    {
-      if (abs(histories[i][j]) > abs(max_amplitude))
-      {
-        max_amplitude = histories[i][j];
-      }
-      total_amplitude += histories[i][j];
-
-      max_amplitudes[i] = max_amplitude;
-      avg_amplitudes[i] = total_amplitude / batchsize;
-    }
-  }
-
-  snprintf(report,
-           sizeof(report),
-           "{\"MA_X\":%d, \"MA_Y\":%d, \"MA_Z\":%d, \"AA_X\":%d, \"AA_Y\":%d, \"AA_Z\":%d, \"SC\":%d}",
-           max_amplitudes[0],
-           max_amplitudes[1],
-           max_amplitudes[2],
-           avg_amplitudes[0],
-           avg_amplitudes[1],
-           avg_amplitudes[2],
-           batchsize);
-  return report;
-}
-
-void update_acceleration_data()
-{
-  imu.readAcc();
-  history_x[batchsize] = imu.a.x - previous_x;
-  history_y[batchsize] = imu.a.y - previous_y;
-  history_z[batchsize] = imu.a.z - previous_z;
-  previous_x = imu.a.x;
-  previous_y = imu.a.y;
-  previous_z = imu.a.z;
-  batchsize++;
-  if (batchsize >= max_batchsize)
-  {
-    batchsize = 0;
-  }
-}
-
 void loop()
 {
+  // Set light states
+  // Light State Blinking
   unsigned long current_millis = millis();
   if (current_millis > (previous_light_millis + LIGHT_BLINK_SPEED))
   {
     blink_state = !blink_state;
-
-    if (light_red_state == BLINKING)
+    
+    for (int i = 0; i < LIGHTCOUNT; i++)
     {
-      digitalWrite(LIGHT_PIN_RED, blink_state);
+      if (light_states[i] == BLINKING)
+      {
+        digitalWrite(lights[i], blink_state);
+      }
     }
-    if (light_orange_state == BLINKING)
-    {
-      digitalWrite(LIGHT_PIN_ORANGE, blink_state);
-    }
-    if (light_green_state == BLINKING)
-    {
-      digitalWrite(LIGHT_PIN_GREEN, blink_state);
-    }
-    if (light_white_state == BLINKING)
-    {
-      digitalWrite(LIGHT_PIN_WHITE, blink_state);
-    }
-
     previous_light_millis = current_millis;
   }
-  update_acceleration_data();
-
-  if (Serial.available())
+  // Light States On/Off
+  for (int i = 0; i < LIGHTCOUNT; i++)
   {
-    char incoming_char = Serial.read();
-    if (incoming_char == message_start_char)
+    if (light_states[i] == ON)
     {
-      incoming_message_size = 0;
+      digitalWrite(lights[i], HIGH);
     }
-    else if (incoming_char == message_end_char)
+    else if (light_states[i] == OFF)
     {
-      bool return_success = true;
-      bool return_silent = false;
-      incoming_message[incoming_message_size] = '\0';
-      if (strcmp(incoming_message, "get-acceleration") == 0)
-      {
-        // TODO: check for availability of data, possibly send "no data" back
-        Serial.print(message_start_char);
-        Serial.print("{\"result\":\"ok\", \"content\":");
-        Serial.print(generate_acceleration_report());
-        Serial.print("}");
-        Serial.println(message_end_char);
-        return_silent = true;
-      }
-      // RED
-      else if (strcmp(incoming_message, "red-off") == 0)
-      {
-        digitalWrite(LIGHT_PIN_RED, LOW);
-        light_red_state = OFF;
-      }
-      else if (strcmp(incoming_message, "red-on") == 0)
-      {
-        digitalWrite(LIGHT_PIN_RED, HIGH);
-        light_red_state = ON;
-      }
-      else if (strcmp(incoming_message, "red-blink") == 0)
-      {
-        light_red_state = BLINKING;
-      }
-      // ORANGE
-      else if (strcmp(incoming_message, "orange-off") == 0)
-      {
-        digitalWrite(LIGHT_PIN_ORANGE, LOW);
-        light_orange_state = OFF;
-      }
-      else if (strcmp(incoming_message, "orange-on") == 0)
-      {
-        digitalWrite(LIGHT_PIN_ORANGE, HIGH);
-        light_orange_state = ON;
-      }
-      else if (strcmp(incoming_message, "orange-blink") == 0)
-      {
-        light_orange_state = BLINKING;
-      }
-      // GREEN
-      else if (strcmp(incoming_message, "green-off") == 0)
-      {
-        digitalWrite(LIGHT_PIN_GREEN, LOW);
-        light_green_state = OFF;
-      }
-      else if (strcmp(incoming_message, "green-on") == 0)
-      {
-        digitalWrite(LIGHT_PIN_GREEN, HIGH);
-        light_green_state = ON;
-      }
-      else if (strcmp(incoming_message, "green-blink") == 0)
-      {
-        light_green_state = BLINKING;
-      }
-      // WHITE
-      else if (strcmp(incoming_message, "white-off") == 0)
-      {
-        digitalWrite(LIGHT_PIN_WHITE, LOW);
-        light_white_state = OFF;
-      }
-      else if (strcmp(incoming_message, "white-on") == 0)
-      {
-        digitalWrite(LIGHT_PIN_WHITE, HIGH);
-        light_white_state = ON;
-      }
-      else if (strcmp(incoming_message, "white-blink") == 0)
-      {
-        light_white_state = BLINKING;
-      }
-      else
-      {
-        return_success = false;
-      }
-
-      if (return_success && !return_silent)
-      {
-        Serial.print(message_start_char);
-        Serial.print("{\"result\":\"ok\"}");
-        Serial.println(message_end_char);
-      }
-      else
-      {
-        Serial.print(message_start_char);
-        Serial.print("{\"result\":\"error\"}");
-        Serial.println(message_end_char);
-      }
-    }
-    else
-    {
-      if (incoming_message_size < max_incoming_message_size)
-      {
-        incoming_message[incoming_message_size] = incoming_char;
-        incoming_message_size++;
-      }
-      else
-      {
-        incoming_message_size = 0;
-      }
+      digitalWrite(lights[i], LOW);
     }
   }
+
 }
